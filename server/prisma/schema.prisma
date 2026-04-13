@@ -1,0 +1,112 @@
+// ─────────────────────────────────────────────────────────
+// Prisma Schema — Live Streaming Platform
+// Models: User, Channel, Stream, Subscription, Comment
+// ─────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Enums ────────────────────────────────────────────────
+
+enum SubscriptionPlan {
+  FREE
+  PAID
+}
+
+enum StreamStatus {
+  PENDING
+  LIVE
+  ENDED
+}
+
+// ── User ─────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  channel      Channel?
+  subscription Subscription?
+  comments     Comment[]
+
+  @@index([email])
+}
+
+// ── Channel ──────────────────────────────────────────────
+// 1:1 with User. Each channel has a unique streamKey for OBS ingestion.
+
+model Channel {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  streamKey String   @unique @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId  String   @unique
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  streams Stream[]
+
+  @@index([streamKey])
+}
+
+// ── Stream ───────────────────────────────────────────────
+
+model Stream {
+  id        String       @id @default(cuid())
+  title     String
+  status    StreamStatus @default(PENDING)
+  startedAt DateTime?
+  endedAt   DateTime?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  // Relations
+  channelId String
+  channel   Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  comments  Comment[]
+
+  @@index([channelId])
+  @@index([status])
+}
+
+// ── Subscription ─────────────────────────────────────────
+
+model Subscription {
+  id        String           @id @default(cuid())
+  plan      SubscriptionPlan @default(FREE)
+  expiresAt DateTime?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  // Relations
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ── Comment (Chat Messages) ──────────────────────────────
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+
+  // Relations
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  streamId String
+  stream   Stream @relation(fields: [streamId], references: [id], onDelete: Cascade)
+
+  @@index([streamId])
+  @@index([userId])
+}
