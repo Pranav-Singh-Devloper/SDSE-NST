@@ -1,11 +1,4 @@
-// ─────────────────────────────────────────────────────────
-// ChatGateway — WebSocket Gateway for real-time chat
-// ─────────────────────────────────────────────────────────
-// Uses Socket.io for real-time messaging.
-// Each stream has its own room (streamId).
-// Integrates with Observer pattern — listens for stream
-// lifecycle events to manage rooms automatically.
-// ─────────────────────────────────────────────────────────
+
 
 import {
   WebSocketGateway,

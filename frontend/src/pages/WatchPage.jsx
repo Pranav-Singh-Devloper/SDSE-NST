@@ -18,21 +18,15 @@ export default function WatchPage() {
     loadViewingAccess();
   }, [streamId]);
 
-  // Countdown timer for free users
   useEffect(() => {
     if (!viewingAccess?.maxDurationSeconds) return;
-
     setTimeLeft(viewingAccess.maxDurationSeconds);
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          return 0;
-        }
+        if (prev <= 1) { clearInterval(interval); return 0; }
         return prev - 1;
       });
     }, 1000);
-
     return () => clearInterval(interval);
   }, [viewingAccess]);
 
@@ -64,120 +58,115 @@ export default function WatchPage() {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  if (loading) return <div style={styles.loading}>Loading stream...</div>;
-  if (!stream) return <div style={styles.loading}>Stream not found</div>;
+  /* ── Loading ── */
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-56px)] gap-4 bg-yt-bg text-[#aaa]">
+        <div className="w-10 h-10 border-[3px] border-[#272727] border-t-yt-red rounded-full animate-spin" />
+        <span className="text-base">Loading stream…</span>
+      </div>
+    );
+  }
 
-  // Get HLS URL from stream's channel streamKey
+  /* ── Not found ── */
+  if (!stream) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-56px)] gap-3 bg-yt-bg text-[#aaa] text-base">
+        <span className="text-5xl">🎬</span>
+        <span>Stream not found</span>
+      </div>
+    );
+  }
+
   const hlsUrl = stream.channel?.streamKey
     ? `${HLS_BASE}/${stream.channel.streamKey}.m3u8`
     : null;
 
+  const isLive = stream.status === 'LIVE';
   const isTimedOut = timeLeft !== null && timeLeft <= 0;
+  const avatarLetter = (stream.channel?.user?.name || 'U')[0].toUpperCase();
 
   return (
-    <div style={styles.container}>
-      <div style={styles.mainContent}>
-        {/* Video Section */}
-        <div style={styles.videoSection}>
+    <div className="min-h-[calc(100vh-56px)] bg-yt-bg text-white px-4 md:px-6 py-4 pb-12 font-sans">
+      <div className="max-w-[1600px] mx-auto flex flex-col lg:flex-row gap-6 items-start">
+
+        {/* ── Left: Video + Info ── */}
+        <div className="flex-1 min-w-0 flex flex-col">
+
+          {/* Video or Timeout screen */}
           {isTimedOut ? (
-            <div style={styles.timedOut}>
-              <h2>⏰ Free viewing time expired</h2>
-              <p>Upgrade to PAID for unlimited viewing</p>
+            <div className="w-full aspect-video flex flex-col items-center justify-center gap-3 bg-[#0d0d0d] rounded-xl text-center">
+              <span className="text-5xl">⏰</span>
+              <h2 className="text-xl font-bold text-white">Free viewing time expired</h2>
+              <p className="text-sm text-[#aaa]">
+                Upgrade to <span className="text-yt-red font-semibold">PAID</span> for unlimited access
+              </p>
             </div>
           ) : (
-            <VideoPlayer src={stream.status === 'LIVE' ? hlsUrl : null} />
+            <VideoPlayer src={isLive ? hlsUrl : null} />
           )}
 
-          {/* Stream Info */}
-          <div style={styles.streamInfo}>
-            <h2 style={styles.streamTitle}>{stream.title}</h2>
-            <div style={styles.streamMeta}>
-              <span style={{
-                color: stream.status === 'LIVE' ? '#4ecca3' : '#666',
-                fontWeight: 'bold',
-              }}>
-                {stream.status === 'LIVE' ? '● LIVE' : `○ ${stream.status}`}
+          {/* Free tier timer banner */}
+          {timeLeft !== null && timeLeft > 0 && (
+            <div className="mt-2 flex items-center gap-2 px-4 py-2.5 bg-red-900/20 border border-red-800/40 rounded-lg text-red-400 text-sm">
+              <span>⏱</span>
+              <span>
+                Free tier — Time remaining:&nbsp;
+                <strong className="text-red-300">{formatTime(timeLeft)}</strong>
               </span>
-              <span>by {stream.channel?.user?.name || 'Unknown'}</span>
+            </div>
+          )}
+
+          {/* Stream info */}
+          <div className="mt-3.5">
+            {/* Title */}
+            <h1 className="text-[19px] font-bold leading-snug text-white mb-3">
+              {stream.title}
+            </h1>
+
+            {/* Channel row */}
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              {/* Avatar + name */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yt-red to-red-400 flex items-center justify-center text-white font-bold text-base shrink-0">
+                  {avatarLetter}
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[15px] font-semibold text-white">
+                    {stream.channel?.user?.name || 'Unknown streamer'}
+                  </span>
+                  <span className="text-xs text-[#aaa]">Channel</span>
+                </div>
+              </div>
+
+              {/* Status badge */}
+              <span className={`px-3 py-1 rounded-full text-xs font-bold tracking-wide ${
+                isLive
+                  ? 'bg-yt-red text-white'
+                  : 'bg-[#272727] text-[#aaa]'
+              }`}>
+                {isLive ? '● LIVE' : `○ ${stream.status}`}
+              </span>
             </div>
 
-            {/* Free tier warning */}
-            {timeLeft !== null && timeLeft > 0 && (
-              <div style={styles.timerBanner}>
-                ⏱️ Free tier — Time remaining: {formatTime(timeLeft)}
-              </div>
-            )}
+            {/* Divider */}
+            <div className="h-px bg-[#272727] my-4" />
+
+            {/* Description box */}
+            <div className="bg-[#1a1a1a] rounded-lg px-4 py-3">
+              <p className="text-sm text-[#aaa]">
+                {isLive ? 'This stream is currently live' : 'Stream is not active right now'}
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Chat Section */}
-        <div style={styles.chatSection}>
+        {/* ── Right: Chat Panel ── */}
+        <div className="w-full lg:w-[360px] shrink-0 lg:sticky lg:top-[72px] h-[420px] lg:h-[calc(100vh-80px)]">
           <ChatBox streamId={streamId} />
         </div>
+
       </div>
     </div>
   );
 }
-
-const styles = {
-  container: {
-    padding: '16px',
-    maxWidth: '1400px',
-    margin: '0 auto',
-  },
-  mainContent: {
-    display: 'flex',
-    gap: '16px',
-    height: 'calc(100vh - 120px)',
-  },
-  videoSection: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  streamInfo: {
-    padding: '16px 0',
-  },
-  streamTitle: {
-    color: '#fff',
-    margin: '0 0 8px 0',
-    fontSize: '20px',
-  },
-  streamMeta: {
-    display: 'flex',
-    gap: '16px',
-    color: '#999',
-    fontSize: '14px',
-  },
-  timerBanner: {
-    marginTop: '12px',
-    padding: '8px 16px',
-    background: '#e94560',
-    borderRadius: '4px',
-    color: '#fff',
-    fontSize: '14px',
-    fontWeight: 'bold',
-  },
-  chatSection: {
-    width: '350px',
-    flexShrink: 0,
-  },
-  timedOut: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '60px',
-    background: '#1a1a2e',
-    borderRadius: '8px',
-    color: '#e94560',
-    textAlign: 'center',
-  },
-  loading: {
-    display: 'flex',
-    justifyContent: 'center',
-    padding: '60px',
-    color: '#999',
-    fontSize: '18px',
-  },
-};
